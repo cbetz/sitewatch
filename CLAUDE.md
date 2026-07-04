@@ -7,12 +7,12 @@ Personal open-source project. See PLAN.md for the current plan and docs/KICKOFF.
 - Git commits must use `Chris Betz <scrapdog@gmail.com>` (set in this repo's local config; never fall back to the global identity).
 - GitHub: personal namespace `github.com/cbetz` only. Never any org.
 - Vercel: personal org `betz` only.
-- Cloudflare and Expo: personal accounts only.
+- Expo: personal account only.
 - Never reference, use, or link any employer account, organization, credential, internal tool, or project in this repo's code, docs, comments, commit messages, or PRs.
 
 ## Conventions
 
-- TypeScript throughout. Expo (expo-router) client, Hono on Cloudflare Workers server.
+- TypeScript throughout. Expo (expo-router) client, Hono on Vercel Functions (Pro plan, `betz` org) with Upstash Redis storage.
 - No emojis in code, docs, comments, or commit messages.
 - Politeness is a feature: honest User-Agent, jitter, backoff, kill switch, scan only watched campgrounds. Never automate booking.
-- Secrets (RIDB key) live in .dev.vars / Wrangler secrets, never in the repo.
+- Secrets (RIDB key, CRON_SECRET, Upstash credentials) live in Vercel env vars / local .env, never in the repo.
