@@ -54,6 +54,22 @@ export default function CampgroundScreen() {
     [data],
   );
 
+  // Sites bookable for every selected night shown in this month's data.
+  const openSiteCount = useMemo(() => {
+    if (!data || !selStart) return null;
+    const end = selEnd ?? selStart;
+    const nights = data.dates.filter((d) => d >= selStart && d <= end);
+    if (nights.length === 0) return null;
+    return data.sites.filter((s) => {
+      if (selectedTypes.length && !selectedTypes.some((t) => s.type.toUpperCase().includes(t.toUpperCase()))) {
+        return false;
+      }
+      return nights.every((d) => s.days[d] === "Available" || s.days[d] === "Open");
+    }).length;
+  }, [data, selStart, selEnd, selectedTypes]);
+
+  const atCurrentMonth = month <= monthStart(new Date());
+
   function pressDate(date: string) {
     if (!selStart || (selStart && selEnd)) {
       setSelStart(date);
@@ -105,8 +121,8 @@ export default function CampgroundScreen() {
       <Stack.Screen options={{ title: typeof name === "string" && name ? name : "Campground" }} />
 
       <View style={styles.monthRow}>
-        <Pressable onPress={() => setMonth((m) => addMonths(m, -1))} hitSlop={12}>
-          <Text style={styles.monthArrow}>{"<"}</Text>
+        <Pressable onPress={() => setMonth((m) => addMonths(m, -1))} hitSlop={12} disabled={atCurrentMonth}>
+          <Text style={[styles.monthArrow, atCurrentMonth && styles.monthArrowDisabled]}>{"<"}</Text>
         </Pressable>
         <Text style={styles.monthLabel}>{monthLabel(month)}</Text>
         <Pressable onPress={() => setMonth((m) => addMonths(m, 1))} hitSlop={12}>
@@ -114,7 +130,7 @@ export default function CampgroundScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.hint}>Tap a day to set the start, tap a later day to set the end.</Text>
+      <Text style={styles.hint}>Tap any day column to set the start, tap a later day to set the end.</Text>
       <View style={styles.legend}>
         <View style={[styles.dot, { backgroundColor: Colors.available }]} />
         <Text style={styles.legendText}>Available</Text>
@@ -146,6 +162,14 @@ export default function CampgroundScreen() {
         </View>
       ) : null}
 
+      {openSiteCount !== null ? (
+        <Text style={styles.openCount}>
+          {openSiteCount > 0
+            ? `${openSiteCount} site${openSiteCount === 1 ? "" : "s"} open right now for your dates — book on Recreation.gov, no watch needed.`
+            : "Nothing open for those dates right now. Set a watch and get pinged the moment a site frees up."}
+        </Text>
+      ) : null}
+
       <Pressable style={[styles.watchButton, !canWatch && styles.watchDisabled]} onPress={watch} disabled={!canWatch}>
         <Text style={styles.watchText}>
           {selStart
@@ -162,6 +186,8 @@ const styles = StyleSheet.create({
   content: { padding: Spacing.md, paddingBottom: Spacing.xl },
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: Spacing.lg },
   monthArrow: { fontSize: 22, color: Colors.accent, fontWeight: "700", paddingHorizontal: Spacing.md },
+  monthArrowDisabled: { opacity: 0.25 },
+  openCount: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: Spacing.lg, textAlign: "center" },
   monthLabel: { fontSize: 17, fontWeight: "700", color: Colors.text, minWidth: 110, textAlign: "center" },
   hint: { color: Colors.textSecondary, fontSize: 12, textAlign: "center", marginTop: Spacing.sm },
   legend: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginVertical: Spacing.sm },

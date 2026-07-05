@@ -44,10 +44,10 @@ export default function ExploreScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.searchRow}>
+      <View style={styles.searchBox}>
         <TextInput
-          style={[styles.input, styles.queryInput]}
-          placeholder="Campground name (e.g. Upper Pines)"
+          style={styles.input}
+          placeholder="Search campgrounds by name"
           placeholderTextColor={Colors.textSecondary}
           value={query}
           onChangeText={setQuery}
@@ -55,18 +55,24 @@ export default function ExploreScreen() {
           returnKeyType="search"
           autoCorrect={false}
         />
-        <TextInput
-          style={[styles.input, styles.stateInput]}
-          placeholder="ST"
-          placeholderTextColor={Colors.textSecondary}
-          value={state}
-          onChangeText={(t) => setState(t.toUpperCase().slice(0, 2))}
-          autoCapitalize="characters"
-          autoCorrect={false}
-        />
-        <Pressable style={styles.searchButton} onPress={runSearch}>
-          <Text style={styles.searchButtonText}>Go</Text>
-        </Pressable>
+        <View style={styles.filterRow}>
+          <View style={styles.stateField}>
+            <Text style={styles.stateLabel}>State</Text>
+            <TextInput
+              style={styles.stateInput}
+              placeholder="Any"
+              placeholderTextColor={Colors.textSecondary}
+              value={state}
+              onChangeText={(t) => setState(t.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              maxLength={2}
+            />
+          </View>
+          <Pressable style={styles.searchButton} onPress={runSearch}>
+            <Text style={styles.searchButtonText}>Search</Text>
+          </Pressable>
+        </View>
       </View>
 
       {results && results.length > 0 ? (
@@ -106,24 +112,34 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
-  searchRow: { flexDirection: "row", gap: Spacing.sm, padding: Spacing.md },
+  searchBox: { padding: Spacing.md, gap: Spacing.sm },
   input: {
     backgroundColor: Colors.card,
     borderRadius: 8,
     paddingHorizontal: Spacing.md,
-    height: 42,
+    height: 44,
     color: Colors.text,
+    fontSize: 15,
   },
-  queryInput: { flex: 1 },
-  stateInput: { width: 52, textAlign: "center" },
+  filterRow: { flexDirection: "row", gap: Spacing.sm },
+  stateField: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.card,
+    borderRadius: 8,
+    paddingLeft: Spacing.md,
+  },
+  stateLabel: { color: Colors.textSecondary, fontSize: 13, fontWeight: "600" },
+  stateInput: { width: 56, height: 44, textAlign: "center", color: Colors.text, fontSize: 15, fontWeight: "700" },
   searchButton: {
+    flex: 1,
     backgroundColor: Colors.accent,
     borderRadius: 8,
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Spacing.md,
+    height: 44,
   },
-  searchButtonText: { color: "#fff", fontWeight: "600" },
+  searchButtonText: { color: "#fff", fontWeight: "700", fontSize: 15 },
   toggle: { alignSelf: "center", marginBottom: Spacing.sm },
   toggleText: { color: Colors.accent, fontWeight: "600" },
   spinner: { marginTop: Spacing.lg },
