@@ -1,4 +1,9 @@
+import { Hono } from "hono";
 import { createProductionApp } from "./env.js";
 
-// Vercel's Hono framework preset serves a default-exported Hono app from src/index.ts.
-export default createProductionApp();
+// Vercel's Hono preset picks as entrypoint the file that imports hono and
+// default-exports an app, so the wiring is mounted here explicitly.
+const app = new Hono();
+app.route("/", createProductionApp());
+
+export default app;
