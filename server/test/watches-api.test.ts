@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createApp } from "../src/app.js";
+import { createApp } from "../src/routes.js";
 import { MemoryStorage } from "../src/storage.js";
 
 const NOW = new Date("2026-07-04T12:00:00.000Z");

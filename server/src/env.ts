@@ -3,7 +3,7 @@ import { createExpoPushSender } from "./push.js";
 import { runScan, type ScanDeps } from "./scan.js";
 import { MemoryStorage, type Storage } from "./storage.js";
 import { RedisStorage } from "./storage-redis.js";
-import { createApp } from "./app.js";
+import { createApp } from "./routes.js";
 
 function createStorage(env: NodeJS.ProcessEnv): Storage {
   if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) return RedisStorage.fromEnv(env);
