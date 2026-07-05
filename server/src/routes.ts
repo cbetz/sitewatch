@@ -3,8 +3,12 @@ import type { ScanSummary } from "./scan.js";
 import type { Storage } from "./storage.js";
 import { isExpired, validateWindow, watchCreateSchema, type Watch } from "./watches.js";
 
+export type StorageMode = "redis" | "memory";
+
 export interface AppDeps {
   storage: Storage;
+  /** Reported by /health so deployments are verifiably persistent. */
+  storageMode?: StorageMode;
   scan: () => Promise<ScanSummary>;
   now: () => Date;
   /** When set, /cron/scan requires Authorization: Bearer <cronSecret> (Vercel sends this automatically). */
@@ -21,7 +25,7 @@ export function createApp(deps: AppDeps) {
   const app = new Hono().basePath("/api");
   const fetchImpl = deps.fetchImpl ?? fetch;
 
-  app.get("/health", (c) => c.json({ ok: true }));
+  app.get("/health", (c) => c.json({ ok: true, storage: deps.storageMode ?? "memory" }));
 
   app.post("/watches", async (c) => {
     let body: unknown;

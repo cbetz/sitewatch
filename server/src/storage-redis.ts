@@ -16,13 +16,6 @@ import type { Backoff, Storage } from "./storage.js";
 export class RedisStorage implements Storage {
   constructor(private redis: Redis) {}
 
-  static fromEnv(env: NodeJS.ProcessEnv = process.env): RedisStorage {
-    const url = env.UPSTASH_REDIS_REST_URL;
-    const token = env.UPSTASH_REDIS_REST_TOKEN;
-    if (!url || !token) throw new Error("UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set");
-    return new RedisStorage(new Redis({ url, token }));
-  }
-
   async getWatch(id: string): Promise<Watch | null> {
     return (await this.redis.get<Watch>(`w:${id}`)) ?? null;
   }
