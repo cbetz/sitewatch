@@ -6,3 +6,17 @@ dist/
 .env.*
 .dev.vars
 .wrangler/
+web-build/
+expo-env.d.ts
+.metro-health-check*
+*.tsbuildinfo
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+/ios
+/android

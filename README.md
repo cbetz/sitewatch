@@ -6,7 +6,18 @@ Open source (MIT). Expo (React Native) client + a small Vercel-hosted scanner. B
 
 ## Status
 
-Server MVP working: availability client, snapshot diffing, watch CRUD, 5-minute scan cron, Expo push. Mobile app not started yet. See [PLAN.md](PLAN.md).
+Server MVP live: availability client, snapshot diffing, watch CRUD, 5-minute scan cron, Expo push. Expo app working end to end: campground search, live availability grid, watch create/delete. See [PLAN.md](PLAN.md).
+
+## App
+
+The Expo app lives at the repo root (`src/app` is the expo-router tree):
+
+```
+npm install
+npx expo start
+```
+
+Explore searches Recreation.gov campgrounds (through the server's RIDB proxy), the campground screen shows a live month grid (tap a day for the start, a later day for the end), and Watch registers the range with the server. Real push delivery needs a development build with an EAS projectId; in Expo Go the app falls back to a local token so everything except delivery still works.
 
 ## Server
 
