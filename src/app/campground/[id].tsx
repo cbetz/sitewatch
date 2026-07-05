@@ -1,10 +1,11 @@
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Platform,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,7 +17,12 @@ import type { MonthAvailability } from "../../api/types";
 import { AvailabilityGrid } from "../../components/AvailabilityGrid";
 import { addMonths, monthLabel, monthStart, shortDate, todayISO } from "../../lib/dates";
 import { getPushIdentity } from "../../lib/push";
-import { Colors, Spacing } from "../../lib/theme";
+import { Colors, isBookable, Spacing } from "../../lib/theme";
+
+interface Selection {
+  start: string | null;
+  end: string | null;
+}
 
 export default function CampgroundScreen() {
   const { id, name } = useLocalSearchParams<{ id: string; name?: string }>();
@@ -24,30 +30,41 @@ export default function CampgroundScreen() {
   const [month, setMonth] = useState(() => monthStart(new Date()));
   const [data, setData] = useState<MonthAvailability | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selStart, setSelStart] = useState<string | null>(null);
-  const [selEnd, setSelEnd] = useState<string | null>(null);
+  const [sel, setSel] = useState<Selection>({ start: null, end: null });
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  const loadMonth = useCallback(
+    async (mode: "initial" | "refresh") => {
+      if (mode === "initial") setLoading(true);
+      else setRefreshing(true);
+      setError(null);
+      try {
+        setData(await fetchMonthAvailability(String(id), month));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load availability");
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [id, month],
+  );
+
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    fetchMonthAvailability(String(id), month)
-      .then((d) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Failed to load availability");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [id, month]);
+    void loadMonth("initial");
+  }, [loadMonth]);
+
+  // Stable identity so the grid's memoized rows never re-render on selection.
+  const pressDate = useCallback((date: string) => {
+    setSel((prev) => {
+      if (!prev.start || (prev.start && prev.end)) return { start: date, end: null };
+      if (date < prev.start) return { start: date, end: prev.end };
+      return { start: prev.start, end: date };
+    });
+  }, []);
 
   const siteTypes = useMemo(
     () => [...new Set((data?.sites ?? []).map((s) => s.type).filter(Boolean))].sort(),
@@ -56,39 +73,28 @@ export default function CampgroundScreen() {
 
   // Sites bookable for every selected night shown in this month's data.
   const openSiteCount = useMemo(() => {
-    if (!data || !selStart) return null;
-    const end = selEnd ?? selStart;
-    const nights = data.dates.filter((d) => d >= selStart && d <= end);
+    if (!data || !sel.start) return null;
+    const end = sel.end ?? sel.start;
+    const nights = data.dates.filter((d) => d >= sel.start! && d <= end);
     if (nights.length === 0) return null;
     return data.sites.filter((s) => {
       if (selectedTypes.length && !selectedTypes.some((t) => s.type.toUpperCase().includes(t.toUpperCase()))) {
         return false;
       }
-      return nights.every((d) => s.days[d] === "Available" || s.days[d] === "Open");
+      return nights.every((d) => isBookable(s.days[d]));
     }).length;
-  }, [data, selStart, selEnd, selectedTypes]);
+  }, [data, sel, selectedTypes]);
 
   const atCurrentMonth = month <= monthStart(new Date());
-
-  function pressDate(date: string) {
-    if (!selStart || (selStart && selEnd)) {
-      setSelStart(date);
-      setSelEnd(null);
-    } else if (date < selStart) {
-      setSelStart(date);
-    } else {
-      setSelEnd(date);
-    }
-  }
 
   function toggleType(type: string) {
     setSelectedTypes((prev) => (prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]));
   }
 
-  const canWatch = Boolean(selStart && (selEnd ?? selStart) >= todayISO()) && !saving;
+  const canWatch = Boolean(sel.start && (sel.end ?? sel.start) >= todayISO()) && !saving;
 
   async function watch() {
-    if (!selStart) return;
+    if (!sel.start) return;
     setSaving(true);
     try {
       const { token, mode } = await getPushIdentity();
@@ -96,8 +102,8 @@ export default function CampgroundScreen() {
         pushToken: token,
         campgroundId: String(id),
         campgroundName: typeof name === "string" ? name : undefined,
-        startDate: selStart,
-        endDate: selEnd ?? selStart,
+        startDate: sel.start,
+        endDate: sel.end ?? sel.start,
         siteTypes: selectedTypes.length ? selectedTypes : undefined,
       });
       const note =
@@ -117,7 +123,11 @@ export default function CampgroundScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.content}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void loadMonth("refresh")} />}
+    >
       <Stack.Screen options={{ title: typeof name === "string" && name ? name : "Campground" }} />
 
       <View style={styles.monthRow}>
@@ -143,7 +153,7 @@ export default function CampgroundScreen() {
       {loading ? <ActivityIndicator style={styles.spinner} color={Colors.accent} /> : null}
       {error ? <Text style={styles.error}>{error}</Text> : null}
       {data && !loading ? (
-        <AvailabilityGrid data={data} selectedStart={selStart} selectedEnd={selEnd} onPressDate={pressDate} />
+        <AvailabilityGrid data={data} selectedStart={sel.start} selectedEnd={sel.end} onPressDate={pressDate} />
       ) : null}
 
       {siteTypes.length > 1 ? (
@@ -172,9 +182,7 @@ export default function CampgroundScreen() {
 
       <Pressable style={[styles.watchButton, !canWatch && styles.watchDisabled]} onPress={watch} disabled={!canWatch}>
         <Text style={styles.watchText}>
-          {selStart
-            ? `Watch ${shortDate(selStart)} to ${shortDate(selEnd ?? selStart)}`
-            : "Select dates to watch"}
+          {sel.start ? `Watch ${shortDate(sel.start)} to ${shortDate(sel.end ?? sel.start)}` : "Select dates to watch"}
         </Text>
       </Pressable>
     </ScrollView>
@@ -187,7 +195,6 @@ const styles = StyleSheet.create({
   monthRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: Spacing.lg },
   monthArrow: { fontSize: 22, color: Colors.accent, fontWeight: "700", paddingHorizontal: Spacing.md },
   monthArrowDisabled: { opacity: 0.25 },
-  openCount: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: Spacing.lg, textAlign: "center" },
   monthLabel: { fontSize: 17, fontWeight: "700", color: Colors.text, minWidth: 110, textAlign: "center" },
   hint: { color: Colors.textSecondary, fontSize: 12, textAlign: "center", marginTop: Spacing.sm },
   legend: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginVertical: Spacing.sm },
@@ -201,12 +208,13 @@ const styles = StyleSheet.create({
   chipActive: { backgroundColor: Colors.accent },
   chipText: { fontSize: 12, color: Colors.text },
   chipTextActive: { color: "#fff" },
+  openCount: { color: Colors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: Spacing.lg, textAlign: "center" },
   watchButton: {
     backgroundColor: Colors.accent,
     borderRadius: 10,
     alignItems: "center",
     paddingVertical: 14,
-    marginTop: Spacing.lg,
+    marginTop: Spacing.md,
   },
   watchDisabled: { opacity: 0.4 },
   watchText: { color: "#fff", fontWeight: "700", fontSize: 15 },
