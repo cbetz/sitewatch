@@ -39,7 +39,12 @@
       "reactCompiler": true
     },
     "extra": {
-      "serverUrl": "https://sitewatch-flame.vercel.app"
-    }
+      "serverUrl": "https://sitewatch-flame.vercel.app",
+      "router": {},
+      "eas": {
+        "projectId": "fa8b1065-1b35-4ce8-9f59-82c5c3b11aef"
+      }
+    },
+    "owner": "chrisatbetzsoftwaredotcom"
   }
 }
